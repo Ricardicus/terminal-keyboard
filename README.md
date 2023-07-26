@@ -25,7 +25,7 @@ O changes octave +
 P change octave -
 
 In piano terms:
-white note are ASDFGHJK
+white note are ASDFGHJK and ZXCVBNM (one octave lower)
 blak ones are WETYU
 
 
