@@ -56,6 +56,8 @@ void changeOctave(int change) {
     currentOctave = 1;
   }
 
+  printf("Octave: %d\n", currentOctave);
+
   // Update the last call time
   lastCallTime = currentTime;
 }
@@ -70,15 +72,41 @@ double generateTone(const std::string &note) {
   }
 
   auto search = note + std::to_string(currentOctave);
-  if (note == "C+") {
-    search = "C" + std::to_string(currentOctave+1);
+  if (note[1] == '+') {
+    search = note[0] + std::to_string(currentOctave + 1);
   }
-  std::cout << search << std::endl;
+  if (note[1] == '-') {
+    search = note[0] + std::to_string(currentOctave - 1);
+  }
   auto it = frequencies.find(search);
   if (it != frequencies.end()) {
     return it->second;
   }
   return 0.0;
+}
+
+int get_amplitude(int a, int x, int samples) {
+  int quanta = samples / 8;
+  int attack_end = quanta * 1;
+  int decay_end = quanta * 2;
+  int sustain_end = quanta * 4;
+  int release_end = quanta * 8;
+
+  if (x < attack_end) {
+    float y = ((float)x) / quanta * a;
+    return (int)y;
+  }
+  if (x < decay_end) {
+    float y = a - (((float)x - attack_end) / quanta) * (1.0 / 3.0 * a);
+    return (int)y;
+  }
+  if (x < sustain_end) {
+    return (int)(((float)2.0 / 3.0) * a);
+  }
+  int p = (int)((float)((float)2.0 / 3.0 * a) -
+                ((x - sustain_end) / ((float)(4 * quanta) + 2)) *
+                    ((2.0 / 3.0) * a));
+  return p;
 }
 
 int main() {
@@ -95,8 +123,14 @@ int main() {
       {sf::Keyboard::T, "F#"},   {sf::Keyboard::G, "G"},
       {sf::Keyboard::Y, "G#"},   {sf::Keyboard::H, "A"},
       {sf::Keyboard::U, "A#"},   {sf::Keyboard::J, "B"},
-      {sf::Keyboard::K, "C+"},   {sf::Keyboard::O, "oct-"},
-      {sf::Keyboard::P, "oct+"},
+      {sf::Keyboard::K, "C+"},   {sf::Keyboard::Z, "C-"},
+      {sf::Keyboard::X, "D-"},   {sf::Keyboard::C, "E-"},
+      {sf::Keyboard::V, "F-"},   {sf::Keyboard::B, "G-"},
+      {sf::Keyboard::N, "A-"},   {sf::Keyboard::M, "B-"},
+      {sf::Keyboard::J, "C"},
+
+      {sf::Keyboard::O, "oct-"}, {sf::Keyboard::P, "oct+"},
+
   };
 
   std::map<sf::Keyboard::Key, sf::Sound> sounds;
@@ -125,16 +159,17 @@ int main() {
         double x = 0;
 
         for (int i = 0; i < SAMPLE_RATE; i++) {
-          raw[i] = AMPLITUDE * sin(x * TWO_PI);
+          raw[i] = get_amplitude(AMPLITUDE, i, SAMPLE_RATE) * sin(x * TWO_PI);
           x += increment;
         }
 
-        if (!buffers[key.first].loadFromSamples(raw, SAMPLE_RATE, 1, SAMPLE_RATE)) {
+        if (!buffers[key.first].loadFromSamples(raw, SAMPLE_RATE, 1,
+                                                SAMPLE_RATE)) {
           std::cerr << "Loading failed!" << std::endl;
           return 1;
         }
 
-        sounds[key.first].stop();
+        // sounds[key.first].stop();
         sounds[key.first].setBuffer(buffers[key.first]);
         sounds[key.first].play();
       }
